@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecipeGenie - Shopping List Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f9fafb;
+        }
+        
+        .recipe-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .price-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .ingredient-item:hover {
+            background-color: #f3f4f6;
+        }
+        
+        .tab-active {
+            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">RecipeGenie</h1>
+            <p class="text-lg text-gray-600">Transform recipes into shopping lists with price estimates</p>
+        </header>
+        
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Recipe Selection Panel -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Select Your Recipe</h2>
+                    <div class="relative">
+                        <input type="text" id="search-recipe" placeholder="Search recipes..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- Recipe Categories -->
+                <div class="flex space-x-4 mb-6 overflow-x-auto pb-2">
+                    <button class="tab-btn px-4 py-2 rounded-lg bg-blue-100 text-blue-600 font-medium" data-category="all">All</button>
+                    <button class="tab-btn px-4 py-2 rounded-lg hover:bg-gray-100" data-category="breakfast">Breakfast</button>
+                    <button class="tab-btn px-4 py-2 rounded-lg hover:bg-gray-100" data-category="lunch">Lunch</button>
+                    <button class="tab-btn px-4 py-2 rounded-lg hover:bg-gray-100" data-category="dinner">Dinner</button>
+                    <button class="tab-btn px-4 py-2 rounded-lg hover:bg-gray-100" data-category="dessert">Dessert</button>
+                    <button class="tab-btn px-4 py-2 rounded-lg hover:bg-gray-100" data-category="vegetarian">Vegetarian</button>
+                </div>
+                
+                <!-- Recipe Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="recipe-grid">
+                    <!-- Recipes will be populated here by JavaScript -->
+                </div>
+                
+                <!-- Custom Recipe Input -->
+                <div class="mt-8 border-t pt-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Or Create Custom Recipe</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="recipe-name" class="block text-sm font-medium text-gray-700 mb-1">Recipe Name</label>
+                            <input type="text" id="recipe-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label for="recipe-ingredients" class="block text-sm font-medium text-gray-700 mb-1">Ingredients (one per line)</label>
+                            <textarea id="recipe-ingredients" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                        </div>
+                        <button id="add-custom-recipe" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200">
+                            Add to Shopping List
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Shopping List Panel -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Shopping List</h2>
+                    <div class="flex space-x-2">
+                        <button id="clear-list" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <button id="print-list" class="text-blue-500 hover:text-blue-700">
+                            <i class="fas fa-print"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Supermarket Tabs -->
+                <div class="flex mb-4 border-b">
+                    <button class="supermarket-tab tab-active px-4 py-2" data-market="all">All</button>
+                    <button class="supermarket-tab px-4 py-2" data-market="walmart">Walmart</button>
+                    <button class="supermarket-tab px-4 py-2" data-market="kroger">Kroger</button>
+                    <button class="supermarket-tab px-4 py-2" data-market="target">Target</button>
+                </div>
+                
+                <!-- Shopping List Items -->
+                <div class="space-y-3 mb-6" id="shopping-list-items">
+                    <div class="text-center py-10 text-gray-500" id="empty-list-message">
+                        <i class="fas fa-shopping-basket text-4xl mb-3"></i>
+                        <p>Your shopping list is empty</p>
+                        <p class="text-sm">Select recipes to get started</p>
+                    </div>
+                    <!-- Items will be populated here by JavaScript -->
+                </div>
+                
+                <!-- Total Estimate -->
+                <div class="border-t pt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-medium text-gray-700">Total Estimated Cost:</span>
+                        <span class="font-bold text-xl" id="total-cost">$0.00</span>
+                    </div>
+                    <button id="checkout-btn" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Checkout Online</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="mt-16 text-center text-gray-600 text-sm">
+            <p>Developed with <span class="text-red-500">❤️</span> by Chris</p>
+            <p class="mt-1">© 2023 RecipeGenie - All rights reserved</p>
+        </footer>
+    </div>
+
+    <script>
+        // Sample recipe data
+        const recipes = [
+            {
+                id: 1,
+                name: "Classic Pancakes",
+                category: "breakfast",
+                servings: 4,
+                prepTime: "15 mins",
+                ingredients: [
+                    { name: "All-purpose flour", quantity: "1.5 cups", price: 1.29 },
+                    { name: "Sugar", quantity: "3 tbsp", price: 2.49 },
+                    { name: "Baking powder", quantity: "1 tbsp", price: 3.19 },
+                    { name: "Salt", quantity: "1 tsp", price: 0.99 },
+                    { name: "Milk", quantity: "1.25 cups", price: 2.89 },
+                    { name: "Egg", quantity: "1 large", price: 3.99 },
+                    { name: "Butter", quantity: "3 tbsp melted", price: 4.29 }
+                ],
+                image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=880&q=80"
+            },
+            {
+                id: 2,
+                name: "Spaghetti Bolognese",
+                category: "dinner",
+                servings: 4,
+                prepTime: "40 mins",
+                ingredients: [
+                    { name: "Spaghetti", quantity: "400g", price: 1.99 },
+                    { name: "Ground beef", quantity: "500g", price: 8.99 },
+                    { name: "Onion", quantity: "1 medium", price: 0.79 },
+                    { name: "Garlic", quantity: "2 cloves", price: 0.50 },
+                    { name: "Tomato paste", quantity: "2 tbsp", price: 1.39 },
+                    { name: "Canned tomatoes", quantity: "400g", price: 1.89 },
+                    { name: "Olive oil", quantity: "2 tbsp", price: 6.99 },
+                    { name: "Parmesan cheese", quantity: "50g", price: 4.99 }
+                ],
+                image: "https://images.unsplash.com/photo-1589227365533-cee630bd59bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=880&q=80"
+            },
+            {
+                id: 3,
+                name: "Caesar Salad",
+                category: "lunch",
+                servings: 2,
+                prepTime: "20 mins",
+                ingredients: [
+                    { name: "Romaine lettuce", quantity: "1 head", price: 2.49 },
+                    { name: "Chicken breast", quantity: "2", price: 7.99 },
+                    { name: "Parmesan cheese", quantity: "30g", price: 4.99 },
+                    { name: "Croutons", quantity: "1 cup", price: 2.19 },
+                    { name: "Caesar dressing", quantity: "3 tbsp", price: 3.49 },
+                    { name: "Lemon", quantity: "1/2", price: 0.79 }
+                ],
+                image: "https://images.unsplash.com/photo-1546793665-c74674f109c1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=880&q=80"
+            },
+            {
+                id: 4,
+                name: "Chocolate Chip Cookies",
+                category: "dessert",
+                servings: 24,
+                prepTime: "30 mins",
+                ingredients: [
+                    { name: "All-purpose flour", quantity: "2.25 cups", price: 1.29 },
+                    { name: "Baking soda", quantity: "1 tsp", price: 1.19 },
+                    { name: "Salt", quantity: "1 tsp", price: 0.99 },
+                    { name: "Butter", quantity: "1 cup", price: 4.29 },
+                    { name: "Brown sugar", quantity: "3/4 cup", price: 2.99 },
+                    { name: "Granulated sugar", quantity: "3/4 cup", price: 2.49 },
+                    { name: "Vanilla extract", quantity: "1 tsp", price: 4.99 },
+                    { name: "Eggs", quantity: "2 large", price: 3.99 },
+                    { name: "Chocolate chips", quantity: "2 cups", price: 5.49 }
+                ],
+                image: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=880&q=80"
+            },
+            {
+                id: 5,
+                name: "Vegetable Stir Fry",
+                category: "vegetarian",
+                servings: 3,
+                prepTime: "25 mins",
+                ingredients: [
+                    { name: "Rice", quantity: "1 cup", price: 2.29 },
+                    { name: "Broccoli", quantity: "2 cups", price: 2.99 },
+                    { name: "Bell peppers", quantity: "2", price: 3.49 },
+                    { name: "Carrots", quantity: "2", price: 1.29 },
+                    { name: "Snow peas", quantity: "1 cup", price: 3.99 },
+                    { name: "Soy sauce", quantity: "3 tbsp", price: 2.19 },
+                    { name: "Sesame oil", quantity: "1 tbsp", price: 5.99 },
+                    { name: "Garlic", quantity: "3 cloves", price: 0.50 },
+                    { name: "Ginger", quantity: "1 tbsp", price: 1.29 }
+                ],
+                image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=880&q=80"
+            },
+            {
+                id: 6,
+                name: "Avocado Toast",
+                category: "breakfast",
+                servings: 2,
+                prepTime: "10 mins",
+                ingredients: [
+                    { name: "Bread", quantity: "4 slices", price: 3.49 },
+                    { name: "Avocado", quantity: "1", price: 1.99 },
+                    { name: "Lemon juice", quantity: "1 tsp", price: 0.79 },
+                    { name: "Red pepper flakes", quantity: "1/4 tsp", price: 3.29 },
+                    { name: "Salt", quantity: "to taste", price: 0.99 },
+                    { name: "Black pepper", quantity: "to taste", price: 2.49 },
+                    { name: "Olive oil", quantity: "1 tbsp", price: 6.99 }
+                ],
+                image: "https://images.unsplash.com/photo-1529563021893-ccf427c1d3ac?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=880&q=80"
+            }
+        ];
+
+        // Shopping list data
+        let shoppingList = [];
+        let activeCategory = 'all';
+        let activeMarket = 'all';
+
+        // DOM elements
+        const recipeGrid = document.getElementById('recipe-grid');
+        const shoppingListItems = document.getElementById('shopping-list-items');
+        const emptyListMessage = document.getElementById('empty-list-message');
+        const totalCostElement = document.getElementById('total-cost');
+        const searchInput = document.getElementById('search-recipe');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const supermarketTabs = document.querySelectorAll('.supermarket-tab');
+        const addCustomRecipeBtn = document.getElementById('add-custom-recipe');
+        const clearListBtn = document.getElementById('clear-list');
+        const printListBtn = document.getElementById('print-list');
+        const checkoutBtn = document.getElementById('checkout-btn');
+
+        // Initialize the app
+        function init() {
+            renderRecipes();
+            setupEventListeners();
+            updateTotalCost();
+        }
+
+        // Render recipes based on active category and search term
+        function renderRecipes() {
+            recipeGrid.innerHTML = '';
+            
+            const searchTerm = searchInput.value.toLowerCase();
+            const filteredRecipes = recipes.filter(recipe => {
+                const matchesCategory = activeCategory === 'all' || recipe.category === activeCategory;
+                const matchesSearch = recipe.name.toLowerCase().includes(searchTerm) || 
+                                     recipe.ingredients.some(ing => ing.name.toLowerCase().includes(searchTerm));
+                return matchesCategory && matchesSearch;
+            });
+
+            if (filteredRecipes.length === 0) {
+                recipeGrid.innerHTML = `
+                    <div class="col-span-2 text-center py-10 text-gray-500">
+                        <i class="fas fa-utensils text-4xl mb-3"></i>
+                        <p>No recipes found</p>
+                        <p class="text-sm">Try a different search or category</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filteredRecipes.forEach(recipe => {
+                const totalPrice = recipe.ingredients.reduce((sum, ing) => sum + ing.price, 0);
+                const avgPricePerServing = (totalPrice / recipe.servings).toFixed(2);
+                
+                const recipeCard = document.createElement('div');
+                recipeCard.className = 'recipe-card bg-white rounded-lg shadow-md overflow-hidden transition duration-300 relative';
+                recipeCard.innerHTML = `
+                    <div class="relative h-48 overflow-hidden">
+                        <img src="${recipe.image}" alt="${recipe.name}" class="w-full h-full object-cover">
+                        <div class="price-badge bg-blue-500 text-white">$${avgPricePerServing}</div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-1">${recipe.name}</h3>
+                        <div class="flex justify-between text-sm text-gray-600 mb-3">
+                            <span><i class="fas fa-utensils mr-1"></i> ${recipe.category}</span>
+                            <span><i class="fas fa-clock mr-1"></i> ${recipe.prepTime}</span>
+                        </div>
+                        <div class="text-sm text-gray-700 mb-3">
+                            <p class="font-medium">Ingredients:</p>
+                            <ul class="list-disc list-inside">
+                                ${recipe.ingredients.slice(0, 3).map(ing => `<li>${ing.name}</li>`).join('')}
+                                ${recipe.ingredients.length > 3 ? '<li>...and more</li>' : ''}
+                            </ul>
+                        </div>
+                        <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition duration-200 add-to-list-btn" data-recipe-id="${recipe.id}">
+                            Add to List
+                        </button>
+                    </div>
+                `;
+                recipeGrid.appendChild(recipeCard);
+            });
+
+            // Add event listeners to the "Add to List" buttons
+            document.querySelectorAll('.add-to-list-btn').forEach(btn => {
+                btn.addEventListener('click', () => addRecipeToList(btn.dataset.recipeId));
+            });
+        }
+
+        // Add a recipe to the shopping list
+        function addRecipeToList(recipeId) {
+            const recipe = recipes.find(r => r.id === parseInt(recipeId));
+            if (!recipe) return;
+
+            recipe.ingredients.forEach(ingredient => {
+                // Check if ingredient already exists in shopping list
+                const existingItem = shoppingList.find(item => 
+                    item.name.toLowerCase() === ingredient.name.toLowerCase()
+                );
+
+                if (existingItem) {
+                    // If it exists, just increase the quantity (simplified for demo)
+                    existingItem.quantity = `${existingItem.quantity} + ${ingredient.quantity}`;
+                } else {
+                    // Otherwise add new item
+                    shoppingList.push({
+                        name: ingredient.name,
+                        quantity: ingredient.quantity,
+                        price: ingredient.price,
+                        recipe: recipe.name,
+                        market: getRandomMarket()
+                    });
+                }
+            });
+
+            renderShoppingList();
+            updateTotalCost();
+        }
+
+        // Render the shopping list
+        function renderShoppingList() {
+            if (shoppingList.length === 0) {
+                emptyListMessage.style.display = 'block';
+                shoppingListItems.innerHTML = '';
+                return;
+            }
+
+            emptyListMessage.style.display = 'none';
+            shoppingListItems.innerHTML = '';
+
+            const filteredItems = activeMarket === 'all' 
+                ? shoppingList 
+                : shoppingList.filter(item => item.market === activeMarket);
+
+            filteredItems.forEach((item, index) => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'ingredient-item bg-gray-50 rounded-lg p-3 flex justify-between items-center transition duration-200 fade-in';
+                itemElement.innerHTML = `
+                    <div class="flex-1">
+                        <div class="font-medium">${item.name}</div>
+                        <div class="text-sm text-gray-600">${item.quantity}</div>
+                        <div class="text-xs text-gray-500 mt-1">From: ${item.recipe}</div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="font-bold text-blue-600">$${item.price.toFixed(2)}</span>
+                        <button class="text-red-500 hover:text-red-700 remove-item-btn" data-index="${index}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                shoppingListItems.appendChild(itemElement);
+            });
+
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-item-btn').forEach(btn => {
+                btn.addEventListener('click', () => removeItemFromList(btn.dataset.index));
+            });
+        }
+
+        // Remove item from shopping list
+        function removeItemFromList(index) {
+            shoppingList.splice(index, 1);
+            renderShoppingList();
+            updateTotalCost();
+        }
+
+        // Update total cost display
+        function updateTotalCost() {
+            const total = shoppingList.reduce((sum, item) => sum + item.price, 0);
+            totalCostElement.textContent = `$${total.toFixed(2)}`;
+        }
+
+        // Add custom recipe from input
+        function addCustomRecipe() {
+            const recipeName = document.getElementById('recipe-name').value.trim();
+            const ingredientsText = document.getElementById('recipe-ingredients').value.trim();
+
+            if (!recipeName || !ingredientsText) {
+                alert('Please enter both recipe name and ingredients');
+                return;
+            }
+
+            const ingredients = ingredientsText.split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                    // Simple parsing - in a real app you'd want more robust parsing
+                    const parts = line.split(',').map(p => p.trim());
+                    return {
+                        name: parts[0] || 'Ingredient',
+                        quantity: parts[1] || '1',
+                        price: parseFloat(parts[2]) || 1.99
+                    };
+                });
+
+            // Add to shopping list
+            ingredients.forEach(ingredient => {
+                shoppingList.push({
+                    name: ingredient.name,
+                    quantity: ingredient.quantity,
+                    price: ingredient.price,
+                    recipe: recipeName,
+                    market: getRandomMarket()
+                });
+            });
+
+            // Clear inputs
+            document.getElementById('recipe-name').value = '';
+            document.getElementById('recipe-ingredients').value = '';
+
+            renderShoppingList();
+            updateTotalCost();
+        }
+
+        // Clear the entire shopping list
+        function clearShoppingList() {
+            if (shoppingList.length === 0 || confirm('Are you sure you want to clear your shopping list?')) {
+                shoppingList = [];
+                renderShoppingList();
+                updateTotalCost();
+            }
+        }
+
+        // Print the shopping list
+        function printShoppingList() {
+            if (shoppingList.length === 0) {
+                alert('Your shopping list is empty');
+                return;
+            }
+
+            // Create a print-friendly version
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+               
+               </script> <html>
+                <head>
+                    <title>Shopping List</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        h1 { color: #333; }
+                        ul { list-style: none; padding: 0; }
+                        li { padding: 8px 0; border-bottom: 1px solid #eee; }
+                        .total { font-weight: bold; margin-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Shopping List</h1>
+                    <ul>
+                        ${shoppingList.map(item => `
+                            <li>
+                                <strong>${item.name}</strong> - ${item.quantity} 
+                                <span style="float: right;">$${item.price.toFixed(2)}</span>
+                                <div style="font-size: 0.8em; color: #666;">From: ${item.recipe}</div>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <div class="total">
+                        Total Estimated Cost: $${shoppingList.reduce((sum, item) => sum + item.price, 0).toFixed(2)}
+                    </div>
+                    <div style="margin-top: 30px; font-size: 0.8em; text-align: center;">
+                        Generated by RecipeGenie - ${new Date().toLocaleDateString()}
+                    </div>
+                    
+                </body>
+                </html>
